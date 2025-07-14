@@ -28,7 +28,7 @@ It includes two distinct parts:
 ## 🔍 View the Project
 
 You can view the rendered report here:  
-👉 [View HTML report](./R2023_Mglej_Mateusz_project_EN.html)
+👉 [View HTML report](https://matmgl.github.io/introduction-to-r-final-project/R2023_Mglej_Mateusz_project_EN.html)
 
 ## © Author
 
