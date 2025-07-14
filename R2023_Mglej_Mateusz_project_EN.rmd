@@ -1,0 +1,385 @@
+---
+title: "Introduction to R - PROJECT"
+author: "Mateusz Mglej"
+date: 2024-01-22
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: vignette
+    toc: yes
+---
+
+```{css echo=FALSE}
+body{
+  background-color: #fafcff
+}
+```
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message =FALSE)
+```
+
+
+```{r libraries, include=FALSE}
+#Load required libraries
+library("Przewodnik")
+library("ggplot2")
+library("readxl")
+library("EnvStats")
+library(scales)
+```
+
+
+# Barnsley Fern
+
+## Introduction[^1]
+
+[^1]: <https://en.wikipedia.org/wiki/Barnsley_fern>
+
+**Barnsley Fern** is a fractal popularized by Michael F. Barnsley. Its name comes from the resemblance to a fern leaf. It is an object that can be described using four affine transformations as the attractor of an iterated function system:
+
+$$
+\begin{align}
+f(x,y) &= (0.85x+0.04y, -0.04x+0.85y+1.6) \\
+g(x,y) &= (-0.15x+0.28y, 0.26x+0.24y+0.44) \\
+h(x,y) &= (0.20x-0.26y, 0.23x+0.22y+1.6) \\
+k(x,y) &= (0, 0.16y)
+\end{align}
+$$ 
+Generating the Barnsley fern is based on randomly using the above transformations with probabilities $85:7:7:1$. The algorithm iterates the coordinates of the plotted point by repeatedly applying one of the transformations. We start with an initial point $(x_0,y_0)=(0,0)$, and at each step randomly select a transformation based on the given probabilities to compute the next point. The process is repeated a specified number of times.
+
+
+## Algorithm code
+
+```{r}
+fern <- function(p){
+  a=0.0; b=0.0  # coordinates to be transformed
+  x = NULL; y = NULL  # vectors for generated coordinates
+  n=1
+  
+  while(n < p + 1){
+    r = runif(1)
+    if(r < 0.01){
+      x[n] = 0.0; y[n] = 0.16 * b
+    } else if(r < 0.86){
+      x[n] = 0.85 * a + 0.04 * b; y[n] = -0.04 * a + 0.85 * b + 1.6
+    } else if(r < 0.93){
+      x[n] = 0.2 * a - 0.26 * b; y[n] = 0.23 * a + 0.22 * b + 1.6
+    } else {
+      x[n] = -0.15 * a + 0.28 * b; y[n] = 0.26 * a + 0.24 * b + 0.44
+    }
+    a = x[n]; b = y[n]; n = n + 1
+  }
+  
+  data = data.frame(x, y)
+  ggplot() +
+    geom_point(data = data, aes(x = x, y = y), colour = 'green4', size = 1, shape = '.') +
+    labs(title = "Barnsley Fern", subtitle = paste("Number of iterations:", number(p))) +
+    theme(axis.line = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.background = element_rect(fill = "#fafcff"),
+          panel.background = element_rect(fill = "#fafcff"),
+          plot.title = element_text(face = "bold", size = 20, colour = 'firebrick4'),
+          plot.subtitle = element_text(face = "bold", size = 15, colour = "blue4"))
+}
+
+```
+
+
+## Result of the algorithm for 500,000 iterations
+
+```{r}
+fern(500000)
+```
+
+
+# Wind Measurement Data Analysis
+
+## Loading the data
+
+In my case, it will be the file **dane_3.xlsx**, loaded from the current folder.
+
+```{r}
+dane_3=read_excel("dane_3.xlsx")
+```
+
+
+## Creating a new data frame
+
+```{r}
+CH7 = dane_3$CH7Avg
+
+sektor=NULL
+sektor[which(CH7 <= 45 | CH7 > 315)] = "N"
+sektor[which(CH7 > 45 & CH7 <= 135)] = "E"
+sektor[which(CH7 > 135 & CH7 <= 225)]= "S"
+sektor[which(CH7 > 225 & CH7 <= 315)]= "W"
+
+ramka.danych = data.frame(date = dane_3$`Date & Time Stamp`,
+                          anemo_80m = dane_3$CH4Avg,
+                          anemo_60m = dane_3$CH5Avg,
+                          anemo_40m = dane_3$CH6Avg,
+                          kierunek_78m = dane_3$CH7Avg,
+                          sector = sektor)
+head(ramka.danych)
+```
+
+
+## Plot theme template
+
+```{r}
+szablon = theme(plot.title = element_text(face = "bold", size = (18), colour='firebrick4'),
+        plot.subtitle = element_text(face='italic', size=(15), colour="wheat4"),
+        legend.title = element_text(face = "bold.italic", size = 18, colour='blue4'),
+        legend.text = element_text(face = "bold.italic", size = (12), colour="darkslategrey"),
+        plot.caption = element_text(color = "red"),
+        axis.title = element_text(face='bold', size = (13), colour="darkslategrey"),
+        axis.text = element_text(face='bold', colour = "steelblue", size = (11)),
+        plot.background = element_rect(fill = "#fafcff"),
+        legend.background = element_rect(fill='#fafcff'),
+        legend.key = element_rect(fill = "#fafcff"),
+        panel.background = element_rect(fill = '#f5f5f5'),
+        legend.title.align = .5,)
+```
+
+
+## Wind speed from all anemometers over time
+
+```{r}
+ggplot()+
+  geom_line(data=ramka.danych,aes(x=date, y=anemo_80m, colour="CH4"),linewidth=0.7) +
+  geom_line(data=ramka.danych,aes(x=date, y=anemo_60m, colour="CH5"),linewidth=0.7) +
+  geom_line(data=ramka.danych,aes(x=date, y=anemo_40m, colour="CH6"),linewidth=0.7) +
+  scale_color_manual(name = "Legend", values = c("CH4" = "darkblue","CH5" = "red","CH6"="darkgreen"))+
+  labs(title="Anemometer readings: CH4, CH5, CH6", x="Date", y="Wind speed [m/s]")+
+  szablon
+
+```
+
+On the plot, we clearly see problems after November 29, with three continuous measurement periods where values are close to 0 (possible sensor freezing).
+
+I define faulty data as measurements with values below *0.5*. In general, we should also check air temperature and standard deviation of wind speed, but visual inspection of this dataset shows the above condition is sufficient. Then, I extract such values and create a new frame without them.
+
+```{r}
+A = which(ramka.danych$anemo_40m<0.5)
+B = which(ramka.danych$anemo_60m<0.5)
+C = which(ramka.danych$anemo_80m<0.5)
+ABC = union(union(A,B),C)
+
+ramka.test = ramka.danych[ABC,]
+head(ramka.test)
+ramka = ramka.danych[-ABC,]
+
+```
+
+The full set of faulty data **ramka.test** consists of readings where one anemometer shows a constant value of *0.2*, and the other two show *0.3*. A preview is shown above.
+
+
+## Wind vertical profile
+
+```{r}
+# anemometer heights
+hCH4 = 80.62
+hCH5 = 60.53
+hCH6 = 40.73
+
+# average wind speeds
+CH4 = mean(ramka$anemo_80m)
+CH5 = mean(ramka$anemo_60m)
+CH6 = mean(ramka$anemo_40m)
+
+wysokosc = c(hCH4,hCH5,hCH6)
+srednie = c(CH4,CH5,CH6)
+nazwy = c("CH4","CH5","CH6")
+
+# wind vertical profile
+ggplot()+
+  geom_point(aes(wysokosc, srednie, color=nazwy), size=3)+
+  labs(x="Height",y="Average wind speed",title="Wind vertical profile")+
+  scale_color_manual(name = "Legend", values = c("CH4" = "darkblue","CH5" = "red","CH6"="darkgreen"))+
+  szablon
+
+
+```
+
+
+## Wind speed plots using Hellmann and logarithmic formulas
+
+### Hellmann–Sutton power law
+
+Hellmann–Sutton formula:
+$$
+\begin{align}
+  V(h)=V_1*\left(\frac{h}{h_1}\right)^w
+\end{align}
+$$
+
+Where:
+
+-  $h_1$ — reference height
+-  $V_1$ — average wind speed at the reference height
+-  $w$ — exponent characteristic for the location
+
+Based on our data, we calculate the value of $w$, then define a function that estimates wind speed for a given height.
+
+```{r}
+h1 = hCH4
+V1 = mean(ramka$anemo_80m)
+h2 = hCH6
+V2 = mean(ramka$anemo_40m)
+w = log(V2/V1, base=h2/h1)
+
+V.Hell = function(h){
+  return(V1*(h/h1)**w)
+}
+```
+
+
+### Logarithmic wind profile law
+
+Logarithmic law: 
+$$
+V(h)=V_1*\frac{ln(h/z_0)}{ln(h_1/z_0)}
+$$ 
+Where:
+
+-   $h_1$ — reference height
+-   $V_1$ — average wind speed at the reference height
+-   $z_0$ — surface roughness coefficient
+
+Now we compute $z_0$ and define the function.
+
+```{r}
+z0 = ((h1**(V2/V1))/h2)**(1/((V2/V1)-1))
+
+V.Log = function(h){
+  return(V1*(log(h/z0)/log(h1/z0)))
+}
+```
+
+
+### Wind speed graph
+
+The plot shows both formulas together with data-based points.
+
+```{r}
+h = seq(10,130,by=0.1)
+
+ggplot()+
+  geom_line(aes(h,V.Hell(h),color="Hellmann formula"), linewidth=1)+
+  geom_line(aes(h,V.Log(h),color="Logarithmic law"), linewidth=1)+
+  geom_point(aes(wysokosc, srednie, color=nazwy), size=3)+
+  labs(x="Height",y="Average wind speed",title="Wind speed from Hellmann and logarithmic laws")+
+  scale_color_manual(name = "Legend", values = c("CH4" = "darkblue","CH5" = "red","CH6"="darkgreen","Hellmann formula"="orange3","Logarithmic law"="brown4"))+
+  szablon
+```
+
+
+## Histogram and Weibull parameter estimation with density curve
+
+For each anemometer, we estimate Weibull distribution parameters and overlay a density curve on a histogram.
+
+### CH4
+
+```{r}
+podzial = seq(0,max(ramka$anemo_80m)+ 0.5, by = 0.5)
+x=seq(from=0,to=16,by=0.1)
+
+estymacja = eweibull(ramka$anemo_80m)
+shape = estymacja$parameters[1]
+scale = estymacja$parameters[2]
+
+ggplot(data = ramka, aes(x = anemo_80m)) +
+  geom_histogram(aes(y = after_stat(density)), breaks = podzial, fill = "lightblue", color = "black") +
+  stat_function(fun = dweibull, args = list(shape = shape, scale = scale), color = "red3", linewidth = 1.5)+
+  labs(x="Speed",y="Density",title="Weibull distribution: histogram & density for CH4")+
+  szablon
+
+  
+```
+
+
+### CH5
+
+```{r}
+podzial = seq(0,max(ramka$anemo_60m)+ 0.5, by = 0.5)
+x=seq(from=0,to=16,by=0.1)
+
+estymacja = eweibull(ramka$anemo_60m)
+shape = estymacja$parameters[1]
+scale = estymacja$parameters[2]
+
+ggplot(data = ramka, aes(x = anemo_60m)) +
+  geom_histogram(aes(y = after_stat(density)), breaks = podzial, fill = "lightblue", color = "black") +
+  stat_function(fun = dweibull, args = list(shape = shape, scale = scale), color = "red3", linewidth = 1.5)+
+  labs(x="Speed",y="Density",title="Weibull distribution: histogram & density for CH5")+
+  szablon
+
+  
+```
+
+
+### CH6
+
+```{r}
+podzial = seq(0,max(ramka$anemo_40m)+ 0.5, by = 0.5)
+x=seq(from=0,to=16,by=0.1)
+
+estymacja = eweibull(ramka$anemo_40m)
+shape = estymacja$parameters[1]
+scale = estymacja$parameters[2]
+
+ggplot(data = ramka, aes(x = anemo_40m)) +
+  geom_histogram(aes(y = after_stat(density)), breaks = podzial, fill = "lightblue", color = "black") +
+  stat_function(fun = dweibull, args = list(shape = shape, scale = scale), color = "red3", linewidth = 1.5)+
+  labs(x="Speed",y="Density",title="Weibull distribution: histogram & density for CH6")+
+  szablon
+
+  
+```
+
+
+## CH4Avg speed histogram by wind sectors (4 panels)
+
+```{r}
+ggplot(ramka ,aes(anemo_80m))+
+  geom_histogram(breaks = seq(0,16,by=0.5),color="black",fill="orange")+
+  facet_wrap(~sector)+
+  labs(title="CH4 histogram by sector",x="Wind speed",y="Frequency")+
+  szablon
+
+```
+
+
+## CH4Avg speed plot by sectors on a single panel
+
+```{r}
+ggplot(ramka, aes(x = date, y = anemo_80m, colour = sector))+ 
+  geom_point(size = 0.75)+
+  labs(title = "CH4Avg speed by sector \non a single panel",x = "Date", y = "Wind speed")+
+  scale_color_manual(name = "Sector", values = c("E" = "blue4","N" = "red4","S"="darkgreen","W"="orange3"))+
+  szablon
+
+```
+
+
+## Boxplot of CH4Avg wind speed by sectors (4 panels)
+
+```{r}
+ggplot(ramka, aes(x=anemo_80m, colour=sector)) + 
+  geom_boxplot()+
+  facet_wrap(~sector, ncol = 2)+
+  scale_color_manual(name="Sector",values = c("E" = "blue4","N" = "red4","S"="darkgreen","W"="orange3"))+
+  labs(title="Boxplot of CH4 wind speed",x="Wind speed",y="Sector")+
+  szablon
+
+
+```
