@@ -18,17 +18,17 @@ It includes two distinct parts:
    - Histogram and Weibull distribution fitting for speed data  
    - Faceted and comparative plots by wind sectors
 
-## 📦 Packages Used
+## Packages Used
 
 - `ggplot2`
 - `readxl`
 - `EnvStats`
 - `scales`
 
-## 🔍 View the Project
+## View the Project
 
 You can view the rendered report here:  
-👉 [View HTML report](https://matmgl.github.io/introduction-to-r-final-project/R2023_Mglej_Mateusz_project_EN.html)
+[View HTML report](https://matmgl.github.io/introduction-to-r-final-project/R2023_Mglej_Mateusz_project_EN.html)
 
 ## © Author
 
